@@ -4,13 +4,14 @@ import json
 import re
 from nltk.sentiment.vader import SentimentIntensityAnalyzer
 import tweepy
+from config import API_KEYS
 
 
 # Twitter API vars
-api_key = 'jSnViwO15mr0Yhgdv8VVV3MzA'
-api_secret = 'QDyIqKJMWOTIsxsoi0LRrrpi45St56rcJrZRjIOnr5mNMWiOUJ'
-access_token = '549804137-7q0hZyVZazQn4DlIF4qtmnfpV2aJNfFaTIReGqB7'
-access_secret = 'kMAcWXxoZCAr4z7TMlWs9B6bvVEMR71Jx54tb5m97qhye'
+api_key = API_KEYS['api_key']
+api_secret = API_KEYS['api_secret']
+access_token = API_KEYS['access_token']
+access_secret = API_KEYS['access_secret']
 
 auth = tweepy.OAuthHandler(api_key, api_secret)
 auth.set_access_token(access_token, access_secret)
