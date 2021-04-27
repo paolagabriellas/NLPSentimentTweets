@@ -8,6 +8,7 @@ from config import API_KEYS
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy.stats import chi2_contingency
+import scipy
 from scipy.stats import iqr
 
 # Twitter API vars
@@ -74,12 +75,22 @@ def get10PercentPopular(tweets):
     return popular
 
 def getPopular(tweets):
-    # get those with popularity Score > 100
+    # get tweets with popularity > mean + std
+    popularity_scores = [tweet.popularity for tweet in tweets]
+    mean = scipy.stats.tmean(popularity_scores)
+    std = scipy.stats.tstd(popularity_scores)
     popular = []
     for tweet in tweets:
-        if tweet.popularity > 1000:
+        if tweet.popularity > (mean + std):
             popular.append(tweet)
     return popular
+
+    # get those with popularity Score > 100
+    # popular = []
+    # for tweet in tweets:
+    #     if tweet.popularity > 1000:
+    #         popular.append(tweet)
+    # return popular
 
 def getUnpopular(tweets, popular):
 
@@ -135,7 +146,23 @@ def chiSquareTest(tweets):
         print('Dependent (reject H0)')
     else:
         print('Independent (H0 holds true)')
-      
+
+
+def normalizePopularity(tweets):
+    # find min and max
+    min = tweets[0].popularity
+    max = tweets[0].popularity
+    for tweet in tweets:
+        if tweet.popularity < min:
+            min = tweet.popularity
+        elif tweet.popularity > max:
+            max = tweet.popularity
+
+    # rescale popularity
+    for tweet in tweets:
+        tweet.popularity = float(tweet.popularity - min) / (max - min)
+
+    return tweets
 
 if __name__ == '__main__':
     
@@ -158,7 +185,7 @@ if __name__ == '__main__':
     # plt.hist(popularity, bins=305)
     # plt.savefig("histo.png")
     
-    popular_tweets = getPopular(tweets)
+    #popular_tweets = getPopular(tweets)
 
     for i in range(len(tweets)):
         tweet = tweets[i]
@@ -173,6 +200,9 @@ if __name__ == '__main__':
         #print(text)
         #print('{}: {}, {}: {}, {}: {}'.format('retweet count', tweet.rtCount, 'favorite count', tweet.favCount,
         #                                     'compound score', polarity_scores['compound']))
+
+    tweets = normalizePopularity(tweets)
+
 
     chiSquareTest(tweets)
 
