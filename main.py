@@ -38,7 +38,7 @@ class Tweet:
 
 def getTweets():
     # get tweets in english language
-    tweets = tweepy.Cursor(api.search, q="lang:en").items(18000)
+    tweets = tweepy.Cursor(api.search, q="lang:en", count=100).items(10000)
     tweetArr = list()
 
     for tweet in tweets:
@@ -177,7 +177,6 @@ def normalizeForFollowing(tweets):
         else:
             followers = tweet.userFollowers
         scaledPopularity = tweet.popularity/followers 
-        print("scaled for following", tweet.popularity, scaledPopularity)
         tweet.popularity = scaledPopularity
         tweet.updatePopularity(scaledPopularity)
     
@@ -197,7 +196,6 @@ def normalizePopularity(tweets):
     for tweet in tweets:
         tweet.popularity = float(tweet.popularity - min) / (max - min)
         tweet.updatePopularity(float(tweet.popularity - min) / (max - min))
-        print("normalized popularity", tweet.popularity)
     return tweets
 
 def printTweets(tweets):
