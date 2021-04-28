@@ -102,8 +102,7 @@ def getPopular(tweets):
     # return popular
 
 def getUnpopular(tweets, popular):
-
-    #get all tweets that are not on the popular list
+    # get all tweets that are not on the popular list
 	ids = []
 	unpopular = []
 	for tweet in popular:
@@ -113,21 +112,31 @@ def getUnpopular(tweets, popular):
 			unpopular.append(tweet)
 	return unpopular
 
-def getNeutral(tweets):
+def getNeutral(tweets, strong):
 	#get tweets with neutral sentiment ( -0.05 < compound score< 0.05)
-	neutrals = []
-	for tweet in tweets:
-		if tweet.polarity > -0.05 and tweet.polarity < 0.05:
-			neutrals.append(tweet)
-	return neutrals
+    strong_ids = [tweet.id for tweet in strong]
+    neutrals = []
+    for tweet in tweets:
+        if tweet.id not in strong_ids:
+            neutrals.append(tweet)
+    return neutrals
 
 def getSentimental(tweets):
-	#get tweets with strong sentiment ( -0.05 > compound score > 0.05)
-	sentimental = []
-	for tweet in tweets:
-		if tweet.polarity < -0.05 or tweet.polarity > 0.05:
-			sentimental.append(tweet)
-	return sentimental
+    polarity_scores = [tweet.polarity for tweet in tweets]
+    mean = scipy.stats.tmean(polarity_scores)
+    std = scipy.stats.tstd(polarity_scores)
+    strong = []
+    for tweet in tweets:
+        if tweet.polarity > (mean + std) or tweet.polarity < (mean - std):
+            strong.append(tweet)
+    return strong
+
+	# #get tweets with strong sentiment ( -0.05 > compound score > 0.05)
+	# sentimental = []
+	# for tweet in tweets:
+	# 	if tweet.polarity < -0.05 or tweet.polarity > 0.05:
+	# 		sentimental.append(tweet)
+	# return sentimental
 
 def chiSquareTest(tweets):
     # H0: popularity and sentiment strength are independent
@@ -135,10 +144,10 @@ def chiSquareTest(tweets):
     popular = getPopular(tweets)
     # print(len(popular))
     unpopular = getUnpopular(tweets, popular)
-    neutralPopular = getNeutral(popular)
-    neutralUnpopular = getNeutral(unpopular)
     strongPopular = getSentimental(popular)
     strongUnpopular = getSentimental(unpopular)
+    neutralPopular = getNeutral(popular, strongPopular)
+    neutralUnpopular = getNeutral(unpopular, strongUnpopular)
 
     alpha = 0.05
 
@@ -203,6 +212,21 @@ def printTweets(tweets):
         print(text)
         print('{}: {}, {}: {}, {}: {}'.format('retweet count', tweet.rtCount, 'favorite count', tweet.favCount,
                                              'compound score', polarity_scores['compound']))
+def normalizePolarity(tweets):
+    # find min and max
+    min = tweets[0].polarity
+    max = tweets[0].polarity
+    for tweet in tweets:
+        if tweet.polarity < min:
+            min = tweet.polarity
+        if tweet.polarity > max:
+            max = tweet.polarity
+
+    # rescale polarity
+    for tweet in tweets:
+        tweet.polarity = -1 + (float(tweet.polarity - min) * 2) / (max - min)
+
+    return tweets
 
 if __name__ == '__main__':
 
@@ -227,8 +251,8 @@ if __name__ == '__main__':
         polarity_scores = vader.polarity_scores(text)
         tweet.updatePolarity(polarity_scores['compound'])
 
-    
-    
+    tweets = normalizePopularity(tweets)
+    tweets = normalizePolarity(tweets)
 
     #tweets = normalizeForFollowing(tweets)
     tweets = normalizePopularity(tweets)
