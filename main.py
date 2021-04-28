@@ -164,7 +164,7 @@ def pearsonsCorrelation(tweets):
     strength = []
     for tweet in tweets:
         popularity.append(tweet.popularity)
-        strength.append(tweet.polarity)
+        strength.append(abs(tweet.polarity))
 
     corr, _ = pearsonr(popularity, strength)
     print('Pearsons correlation: %.3f' % corr)
