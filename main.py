@@ -1,15 +1,9 @@
-import nltk
-from nltk.corpus import twitter_samples
-import json
 import re
 from nltk.sentiment.vader import SentimentIntensityAnalyzer
 import tweepy
 from config import API_KEYS
-import matplotlib.pyplot as plt
-import numpy as np
+import scipy
 from scipy.stats import chi2_contingency
-import scipy as stats
-from scipy.stats import iqr
 from scipy.stats import pearsonr
 
 
@@ -253,9 +247,6 @@ if __name__ == '__main__':
 
     tweets = normalizePopularity(tweets)
     tweets = normalizePolarity(tweets)
-
-    #tweets = normalizeForFollowing(tweets)
-    tweets = normalizePopularity(tweets)
 
     chiSquareTest(tweets)
     pearsonsCorrelation(tweets)
