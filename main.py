@@ -39,7 +39,7 @@ class Tweet:
 
 def getTweets():
     # get tweets in english language
-    tweets = tweepy.Cursor(api.search, q="lang:en").items(100)
+    tweets = tweepy.Cursor(api.search, q="lang:en").items(300000)
     tweetArr = list()
 
     for tweet in tweets:
