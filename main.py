@@ -8,8 +8,10 @@ from config import API_KEYS
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy.stats import chi2_contingency
-import scipy
+import scipy as stats
 from scipy.stats import iqr
+from scipy.stats import pearsonr
+
 
 # Twitter API vars
 api_key = API_KEYS['api_key']
@@ -21,14 +23,14 @@ auth = tweepy.OAuthHandler(api_key, api_secret)
 auth.set_access_token(access_token, access_secret)
 api = tweepy.API(auth, wait_on_rate_limit=True)
 
-
 class Tweet:
-    def __init__(self, id, text, favCount, rtCount):
+    def __init__(self, id, text, favCount, rtCount, userFollowers):
         self.id = id
         self.text = text
         self.favCount = favCount
         self.rtCount = rtCount
         self.popularity = favCount + rtCount
+        self.userFollowers = userFollowers
         self.polarity = None
 
     def updateText(self, text):
@@ -36,6 +38,9 @@ class Tweet:
     
     def updatePolarity(self, polarity):
         self.polarity = polarity
+
+    def updatePopularity(self, popularity):
+        self.popularity = popularity
 
 def getTweets():
     # get tweets in english language
@@ -46,17 +51,21 @@ def getTweets():
         tweetArr.append(tweet)
 
     tweetsList = []
+    i = 0
     for tweet in tweetArr:
         # print(tweet.text, "	rt count:  ", tweet.retweet_count)
         favCount = 0
+        followerCount = 0
         if hasattr(tweet, "retweeted_status"):
             # print("favorite count:  ", tweet.retweeted_status._json["favorite_count"])
             favCount = tweet.retweeted_status._json["favorite_count"]
         else:
             # print("favorite count:  ", tweet.favorite_count)
             favCount = tweet.favorite_count
-        obj = Tweet(tweet.id, tweet.text, favCount, tweet.retweet_count)
+            
+        obj = Tweet(tweet.id, tweet.text, favCount, tweet.retweet_count, tweet.user.followers_count)
         tweetsList.append(obj)
+        i= i+1
     return tweetsList
 
 def get10PercentPopular(tweets):
@@ -156,6 +165,29 @@ def chiSquareTest(tweets):
     else:
         print('Independent (H0 holds true)')
 
+def pearsonsCorrelation(tweets):
+    popularity = []
+    strength = []
+    for tweet in tweets:
+        popularity.append(tweet.popularity)
+        strength.append(tweet.polarity)
+
+    corr, _ = pearsonr(popularity, strength)
+    print('Pearsons correlation: %.3f' % corr)
+
+def normalizeForFollowing(tweets):
+    for tweet in tweets: 
+        followers = 1
+        if tweet.userFollowers == 0:
+            followers = 1
+        else:
+            followers = tweet.userFollowers
+        scaledPopularity = tweet.popularity/followers 
+        print("scaled for following", tweet.popularity, scaledPopularity)
+        tweet.popularity = scaledPopularity
+        tweet.updatePopularity(scaledPopularity)
+    
+    return tweets
 
 def normalizePopularity(tweets):
     # find min and max
@@ -170,9 +202,16 @@ def normalizePopularity(tweets):
     # rescale popularity
     for tweet in tweets:
         tweet.popularity = float(tweet.popularity - min) / (max - min)
-
+        tweet.updatePopularity(float(tweet.popularity - min) / (max - min))
+        print("normalized popularity", tweet.popularity)
     return tweets
 
+def printTweets(tweets):
+    for tweet in tweets:
+        text = tweet.text
+        print(text)
+        print('{}: {}, {}: {}, {}: {}'.format('retweet count', tweet.rtCount, 'favorite count', tweet.favCount,
+                                             'compound score', polarity_scores['compound']))
 def normalizePolarity(tweets):
     # find min and max
     min = tweets[0].polarity
@@ -190,7 +229,7 @@ def normalizePolarity(tweets):
     return tweets
 
 if __name__ == '__main__':
-    
+
     # pattern to clean tweet text
     pattern = r'RT\s@.+:\s|\shttp.+'
     vader = SentimentIntensityAnalyzer()
@@ -201,6 +240,27 @@ if __name__ == '__main__':
         #print(tweet.popularity)
         popularity.append(tweet.popularity)
 
+    # run sentiment analysis and update the polarity scores
+    for i in range(len(tweets)):
+        tweet = tweets[i]
+        text = tweet.text
+        split = re.split(pattern, text)
+        for string in split:
+            if string != '':
+                text = string
+        polarity_scores = vader.polarity_scores(text)
+        tweet.updatePolarity(polarity_scores['compound'])
+
+    tweets = normalizePopularity(tweets)
+    tweets = normalizePolarity(tweets)
+
+    #tweets = normalizeForFollowing(tweets)
+    tweets = normalizePopularity(tweets)
+
+    chiSquareTest(tweets)
+    pearsonsCorrelation(tweets)
+    
+    
     # histogram for popularity tweets
     # interRange = iqr(popularity, interpolation='midpoint')
     # print(interRange, max(popularity), min(popularity))
@@ -211,42 +271,4 @@ if __name__ == '__main__':
     # plt.savefig("histo.png")
     
     #popular_tweets = getPopular(tweets)
-
-    for i in range(len(tweets)):
-        tweet = tweets[i]
-        text = tweet.text
-        split = re.split(pattern, text)
-        for string in split:
-            if string != '':
-                text = string
-        polarity_scores = vader.polarity_scores(text)
-        tweet.updatePolarity(polarity_scores['compound'])
-        
-        #print(text)
-        #print('{}: {}, {}: {}, {}: {}'.format('retweet count', tweet.rtCount, 'favorite count', tweet.favCount,
-        #                                     'compound score', polarity_scores['compound']))
-
-    tweets = normalizePopularity(tweets)
-    tweets = normalizePolarity(tweets)
-
-
-    chiSquareTest(tweets)
-
-    #print()
-    #print('#### Popular tweets ####')
-    #print()
-
-    #for j in range(50):
-    #    tweet = popular_tweets[j]
-    #    text = tweet.text
-    #    split = re.split(pattern, text)
-    #    for string in split:
-    #        if string != '':
-    #            text = string
-    #    polarity_scores = vader.polarity_scores(text)
-    #    print(text)
-    #    print('{}: {}, {}: {}, {}: {}'.format('retweet count', tweet.rtCount, 'favorite count', tweet.favCount,
-    #                                          'compound score', polarity_scores['compound']))
-
-
-
+    
